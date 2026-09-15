@@ -1,0 +1,3468 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#172519">
+<title>Fazenda Real 3D</title>
+
+<style>
+:root{
+  color-scheme:dark;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --glass:rgba(12,21,14,.72);
+  --line:rgba(255,255,255,.13)
+}
+
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent
+}
+
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#0b100c
+}
+
+body{
+  position:fixed;
+  inset:0;
+  touch-action:none
+}
+
+#game,canvas{
+  width:100%;
+  height:100%;
+  display:block
+}
+
+#hud{
+  position:fixed;
+  z-index:10;
+  top:max(10px,env(safe-area-inset-top));
+  left:10px;
+  right:10px;
+  display:grid;
+  grid-template-columns:1.15fr 2fr .85fr;
+  gap:8px;
+  pointer-events:none
+}
+
+.card{
+  background:var(--glass);
+  border:1px solid var(--line);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border-radius:15px;
+  padding:10px 12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.2)
+}
+
+.brand{
+  display:flex;
+  flex-direction:column;
+  gap:3px
+}
+
+.brand small{
+  opacity:.72
+}
+
+.stats{
+  display:flex;
+  align-items:center;
+  justify-content:space-around;
+  gap:9px;
+  flex-wrap:wrap
+}
+
+.clock{
+  text-align:right;
+  display:flex;
+  flex-direction:column;
+  justify-content:center
+}
+
+.clock small{
+  opacity:.75
+}
+
+.clock b{
+  font-size:20px
+}
+
+#mission{
+  position:fixed;
+  z-index:11;
+  top:94px;
+  left:10px;
+  max-width:min(440px,78vw);
+  font-size:12px;
+  pointer-events:none
+}
+
+#hint{
+  position:fixed;
+  z-index:12;
+  left:50%;
+  bottom:160px;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,.58);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:999px;
+  padding:8px 12px;
+  font-size:13px;
+  white-space:nowrap;
+  pointer-events:none
+}
+
+#controls{
+  position:fixed;
+  z-index:20;
+  inset:auto 0 max(14px,env(safe-area-inset-bottom)) 0;
+  padding:0 18px;
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  pointer-events:none
+}
+
+#joystick{
+  width:130px;
+  height:130px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.23);
+  background:rgba(5,10,6,.32);
+  position:relative;
+  pointer-events:auto;
+  box-shadow:inset 0 0 24px rgba(255,255,255,.04)
+}
+
+#stick{
+  width:54px;
+  height:54px;
+  position:absolute;
+  left:38px;
+  top:38px;
+  border-radius:50%;
+  background:rgba(255,255,255,.74);
+  box-shadow:0 8px 22px rgba(0,0,0,.35)
+}
+
+.actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(78px,105px));
+  gap:8px;
+  pointer-events:auto
+}
+
+button{
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(13,23,16,.85);
+  color:#fff;
+  border-radius:14px;
+  min-height:49px;
+  padding:8px 10px;
+  font-weight:800;
+  backdrop-filter:blur(10px)
+}
+
+button:active{
+  transform:scale(.96)
+}
+
+.primary{
+  background:rgba(42,124,60,.92)
+}
+
+.tractor{
+  background:rgba(186,127,23,.9)
+}
+
+#toast{
+  position:fixed;
+  z-index:40;
+  top:110px;
+  left:50%;
+  transform:translate(-50%,-10px);
+  background:rgba(0,0,0,.82);
+  border:1px solid var(--line);
+  border-radius:13px;
+  padding:10px 14px;
+  opacity:0;
+  transition:.18s;
+  pointer-events:none;
+  text-align:center;
+  max-width:88vw
+}
+
+#toast.show{
+  opacity:1;
+  transform:translate(-50%,0)
+}
+
+#cross{
+  position:fixed;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  opacity:.35;
+  z-index:5;
+  pointer-events:none
+}
+
+dialog{
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:18px;
+  background:#142019;
+  color:#fff;
+  width:min(90vw,370px);
+  padding:20px;
+  box-shadow:0 30px 90px rgba(0,0,0,.55)
+}
+
+dialog::backdrop{
+  background:rgba(0,0,0,.58);
+  backdrop-filter:blur(5px)
+}
+
+.dialog-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  flex-wrap:wrap
+}
+
+.dialog-actions button{
+  min-height:42px
+}
+
+.good{
+  background:#4b9f61
+}
+
+@media(max-width:760px){
+  #hud{
+    grid-template-columns:1fr auto
+  }
+
+  .stats{
+    grid-column:1/-1;
+    grid-row:2;
+    font-size:13px
+  }
+
+  .brand{
+    font-size:13px
+  }
+
+  .clock b{
+    font-size:17px
+  }
+
+  #mission{
+    top:112px
+  }
+
+  .actions{
+    grid-template-columns:repeat(2,minmax(74px,95px))
+  }
+
+  #hint{
+    max-width:67vw;
+    white-space:normal;
+    text-align:center
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="game"></div>
+
+<section id="hud">
+  <div class="card brand">
+    <strong>🌾 Fazenda Real 3D</strong>
+    <small id="weather">☀️ Ensolarado</small>
+  </div>
+
+  <div class="card stats">
+    <span>💰 R$ <b id="money">500</b></span>
+    <span>⚡ <b id="energy">100</b>%</span>
+    <span>🌱 <b id="seeds">10</b></span>
+    <span>🥕 <b id="produce">0</b></span>
+    <span>⛽ <b id="fuel">100</b>%</span>
+  </div>
+
+  <div class="card clock">
+    <small id="day">Dia 1</small>
+    <b id="time">06:00</b>
+  </div>
+</section>
+
+<div id="mission" class="card">
+  🎯 Missão: plante, regue e venda sua primeira colheita.
+</div>
+
+<div id="hint">
+  Aproxime-se de um canteiro
+</div>
+
+<div id="cross">
+  •
+</div>
+
+<div id="controls">
+
+  <div id="joystick">
+    <div id="stick"></div>
+  </div>
+
+  <div class="actions">
+
+    <button id="actionBtn" class="primary">
+      🌱 Ação
+    </button>
+
+    <button id="tractorBtn" class="tractor">
+      🚜 Trator
+    </button>
+
+    <button id="shopBtn">
+      🛒 Comprar
+    </button>
+
+    <button id="sellBtn">
+      💵 Vender
+    </button>
+
+    <button id="saveBtn">
+      💾 Salvar
+    </button>
+
+    <button id="resetBtn">
+      ↻ Reset
+    </button>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<dialog id="shopDialog">
+
+  <h2>Loja da Vila</h2>
+
+  <p>
+    🌱 5 sementes por <b>R$ 25</b>
+  </p>
+
+  <p>
+    ⛽ 25% de combustível por <b>R$ 40</b>
+  </p>
+
+  <div class="dialog-actions">
+
+    <button id="closeShop">
+      Fechar
+    </button>
+
+    <button id="buySeeds" class="good">
+      Comprar sementes
+    </button>
+
+    <button id="buyFuel" class="good">
+      Comprar combustível
+    </button>
+
+  </div>
+
+</dialog>
+
+<script type="module">
+
+import * as THREE
+from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+
+const SAVE_KEY = 'fazenda-real-3d-single-v2';
+
+const ui = {
+
+  money: document.querySelector('#money'),
+
+  energy: document.querySelector('#energy'),
+
+  seeds: document.querySelector('#seeds'),
+
+  produce: document.querySelector('#produce'),
+
+  fuel: document.querySelector('#fuel'),
+
+  day: document.querySelector('#day'),
+
+  time: document.querySelector('#time'),
+
+  weather: document.querySelector('#weather'),
+
+  hint: document.querySelector('#hint'),
+
+  toast: document.querySelector('#toast'),
+
+  mission: document.querySelector('#mission'),
+
+  action: document.querySelector('#actionBtn'),
+
+  tractor: document.querySelector('#tractorBtn'),
+
+  shop: document.querySelector('#shopBtn'),
+
+  sell: document.querySelector('#sellBtn'),
+
+  save: document.querySelector('#saveBtn'),
+
+  reset: document.querySelector('#resetBtn'),
+
+  dialog: document.querySelector('#shopDialog'),
+
+  closeShop: document.querySelector('#closeShop'),
+
+  buySeeds: document.querySelector('#buySeeds'),
+
+  buyFuel: document.querySelector('#buyFuel')
+
+};
+
+const defaultState = () => ({
+
+  version: 2,
+
+  money: 500,
+
+  energy: 100,
+
+  seeds: 10,
+
+  produce: 0,
+
+  fuel: 100,
+
+  day: 1,
+
+  minutes: 360,
+
+  weather: 'sunny',
+
+  lastWeatherDay: 1,
+
+  elapsed: 0,
+
+  inTractor: false,
+
+  soldOnce: false,
+
+  plantedOnce: false,
+
+  player: {
+    x: 0,
+    z: 15
+  },
+
+  tractor: {
+    x: 8,
+    z: 12,
+    rot: 0
+  },
+
+  plots: Array.from(
+    {length:30},
+    (_,id) => ({
+      id,
+      state:'empty',
+      plantedAt:0,
+      watered:false
+    })
+  )
+
+});
+
+let state = defaultState();
+
+try {
+
+  const raw = localStorage.getItem(SAVE_KEY);
+
+  if(raw){
+
+    const saved = JSON.parse(raw);
+
+    if(saved.version === 2){
+
+      state = saved;
+
+    }
+
+  }
+
+}catch(error){
+
+  console.log(error);
+
+}
+
+const scene = new THREE.Scene();
+
+scene.background =
+new THREE.Color(0x9cc9e7);
+
+scene.fog =
+new THREE.FogExp2(
+  0xa8c9d0,
+  .0064
+);
+
+const camera =
+new THREE.PerspectiveCamera(
+  62,
+  innerWidth / innerHeight,
+  .1,
+  500
+);
+
+const renderer =
+new THREE.WebGLRenderer({
+
+  antialias:true,
+
+  powerPreference:'high-performance'
+
+});
+
+renderer.setPixelRatio(
+  Math.min(devicePixelRatio,2)
+);
+
+renderer.setSize(
+  innerWidth,
+  innerHeight
+);
+
+renderer.shadowMap.enabled = true;
+
+renderer.shadowMap.type =
+THREE.PCFSoftShadowMap;
+
+renderer.outputColorSpace =
+THREE.SRGBColorSpace;
+
+renderer.toneMapping =
+THREE.ACESFilmicToneMapping;
+
+renderer.toneMappingExposure = 1.05;
+
+document
+.querySelector('#game')
+.appendChild(renderer.domElement);
+
+const hemi =
+new THREE.HemisphereLight(
+  0xd7ecff,
+  0x3a452d,
+  1.75
+);
+
+scene.add(hemi);
+
+const sun =
+new THREE.DirectionalLight(
+  0xfff2cf,
+  3.2
+);
+
+sun.position.set(
+  50,
+  65,
+  25
+);
+
+sun.castShadow = true;
+
+sun.shadow.mapSize.set(
+  2048,
+  2048
+);
+
+sun.shadow.camera.left = -95;
+
+sun.shadow.camera.right = 95;
+
+sun.shadow.camera.top = 95;
+
+sun.shadow.camera.bottom = -95;
+
+scene.add(sun);
+
+const groundMat =
+new THREE.MeshStandardMaterial({
+
+  color:0x537e40,
+
+  roughness:.98
+
+});
+
+const ground =
+new THREE.Mesh(
+
+  new THREE.PlaneGeometry(
+    280,
+    280
+  ),
+
+  groundMat
+
+);
+
+ground.rotation.x =
+-Math.PI / 2;
+
+ground.receiveShadow = true;
+
+scene.add(ground);
+
+function mat(
+  color,
+  rough=.85
+){
+
+  return new THREE.MeshStandardMaterial({
+
+    color,
+
+    roughness:rough
+
+  });
+
+}
+
+function addBox(
+  w,
+  h,
+  d,
+  color,
+  x,
+  y,
+  z
+){
+
+  const mesh =
+  new THREE.Mesh(
+
+    new THREE.BoxGeometry(
+      w,
+      h,
+      d
+    ),
+
+    mat(color)
+
+  );
+
+  mesh.position.set(
+    x,
+    y,
+    z
+  );
+
+  mesh.castShadow = true;
+
+  mesh.receiveShadow = true;
+
+  scene.add(mesh);
+
+  return mesh;
+
+}
+
+function addCylinder(
+  r1,
+  r2,
+  h,
+  color,
+  x,
+  y,
+  z,
+  seg=12
+){
+
+  const mesh =
+  new THREE.Mesh(
+
+    new THREE.CylinderGeometry(
+      r1,
+      r2,
+      h,
+      seg
+    ),
+
+    mat(color)
+
+  );
+
+  mesh.position.set(
+    x,
+    y,
+    z
+  );
+
+  mesh.castShadow = true;
+
+  mesh.receiveShadow = true;
+
+  scene.add(mesh);
+
+  return mesh;
+
+}
+
+function addTree(
+  x,
+  z,
+  scale=1
+){
+
+  addCylinder(
+
+    .52 * scale,
+
+    .78 * scale,
+
+    4.6 * scale,
+
+    0x6a4c2d,
+
+    x,
+
+    2.3 * scale,
+
+    z,
+
+    9
+
+  );
+
+  const crown =
+  new THREE.Mesh(
+
+    new THREE.IcosahedronGeometry(
+      2.5 * scale,
+      1
+    ),
+
+    mat(
+      0x2f6f38,
+      .95
+    )
+
+  );
+
+  crown.position.set(
+
+    x,
+
+    5.2 * scale,
+
+    z
+
+  );
+
+  crown.castShadow = true;
+
+  scene.add(crown);
+
+}
+
+/* CASA */
+
+addBox(
+  15,
+  7.5,
+  11,
+  0xe4d7bd,
+  -27,
+  3.75,
+  -20
+);
+
+const roof =
+new THREE.Mesh(
+
+  new THREE.ConeGeometry(
+    10.5,
+    5.5,
+    4
+  ),
+
+  mat(
+    0x6e3026
+  )
+
+);
+
+roof.position.set(
+  -27,
+  9.5,
+  -20
+);
+
+roof.rotation.y =
+Math.PI / 4;
+
+roof.scale.z = .76;
+
+roof.castShadow = true;
+
+scene.add(roof);
+
+addBox(
+  2.3,
+  4.2,
+  .8,
+  0x714f36,
+  -27,
+  2.1,
+  -14.1
+);
+
+addBox(
+  2.2,
+  2,
+  .7,
+  0x80b8db,
+  -22.3,
+  4.1,
+  -14.1
+);
+
+addBox(
+  2.2,
+  2,
+  .7,
+  0x80b8db,
+  -31.7,
+  4.1,
+  -14.1
+);
+
+/* CELEIRO */
+
+addBox(
+  20,
+  9.5,
+  14,
+  0x9d342d,
+  29,
+  4.75,
+  -25
+);
+
+const barnRoof =
+new THREE.Mesh(
+
+  new THREE.ConeGeometry(
+    13.5,
+    6,
+    4
+  ),
+
+  mat(
+    0x4c2b24
+  )
+
+);
+
+barnRoof.position.set(
+  29,
+  11.7,
+  -25
+);
+
+barnRoof.rotation.y =
+Math.PI / 4;
+
+barnRoof.scale.z = .72;
+
+barnRoof.castShadow = true;
+
+scene.add(barnRoof);
+
+addBox(
+  6,
+  6.5,
+  .7,
+  0x422e20,
+  29,
+  3.25,
+  -17.65
+);
+
+/* SILO */
+
+addCylinder(
+  3,
+  3.3,
+  10,
+  0xb8b7ae,
+  44,
+  5,
+  -20,
+  28
+);
+
+const siloTop =
+new THREE.Mesh(
+
+  new THREE.ConeGeometry(
+    3.5,
+    2.6,
+    28
+  ),
+
+  mat(
+    0x8f8f88
+  )
+
+);
+
+siloTop.position.set(
+  44,
+  11.3,
+  -20
+);
+
+siloTop.castShadow = true;
+
+scene.add(siloTop);
+
+/* LAGO */
+
+const pond =
+new THREE.Mesh(
+
+  new THREE.CircleGeometry(
+    13,
+    48
+  ),
+
+  new THREE.MeshPhysicalMaterial({
+
+    color:0x3f9fc4,
+
+    transparent:true,
+
+    opacity:.75,
+
+    roughness:.15,
+
+    metalness:.03
+
+  })
+
+);
+
+pond.rotation.x =
+-Math.PI / 2;
+
+pond.position.set(
+  45,
+  .05,
+  32
+);
+
+scene.add(pond);
+
+/* CAMINHOS */
+
+const pathMat =
+mat(
+  0xa48c65,
+  1
+);
+
+const path1 =
+new THREE.Mesh(
+
+  new THREE.PlaneGeometry(
+    9,
+    100
+  ),
+
+  pathMat
+
+);
+
+path1.rotation.x =
+-Math.PI / 2;
+
+path1.position.set(
+  0,
+  .03,
+  -8
+);
+
+scene.add(path1);
+
+const path2 =
+new THREE.Mesh(
+
+  new THREE.PlaneGeometry(
+    72,
+    7
+  ),
+
+  pathMat
+
+);
+
+path2.rotation.x =
+-Math.PI / 2;
+
+path2.position.set(
+  4,
+  .035,
+  20
+);
+
+scene.add(path2);
+
+/* ÁRVORES */
+
+for(
+  let i = 0;
+  i < 46;
+  i++
+){
+
+  const angle =
+  Math.random() *
+  Math.PI *
+  2;
+
+  const radius =
+  72 +
+  Math.random() *
+  55;
+
+  addTree(
+
+    Math.cos(angle) *
+    radius,
+
+    Math.sin(angle) *
+    radius,
+
+    .8 +
+    Math.random() *
+    .7
+
+  );
+
+}
+
+[
+  -56,
+  -47,
+  -38,
+  43,
+  53,
+  63
+]
+.forEach(
+  (x,i) => {
+
+    addTree(
+
+      x,
+
+      -49 +
+      (i % 2) *
+      10,
+
+      1.05
+
+    );
+
+  }
+);
+
+/* CERCA */
+
+function fence(
+  x1,
+  z1,
+  x2,
+  z2,
+  amount
+){
+
+  for(
+    let i=0;
+    i<=amount;
+    i++
+  ){
+
+    const t =
+    i / amount;
+
+    const x =
+    THREE.MathUtils.lerp(
+      x1,
+      x2,
+      t
+    );
+
+    const z =
+    THREE.MathUtils.lerp(
+      z1,
+      z2,
+      t
+    );
+
+    addBox(
+      .32,
+      2,
+      .32,
+      0x8b653f,
+      x,
+      1,
+      z
+    );
+
+  }
+
+  const centerX =
+  (x1 + x2) / 2;
+
+  const centerZ =
+  (z1 + z2) / 2;
+
+  const length =
+  Math.hypot(
+    x2-x1,
+    z2-z1
+  );
+
+  const angle =
+  Math.atan2(
+    x2-x1,
+    z2-z1
+  );
+
+  for(
+    const y
+    of
+    [
+      1,
+      1.72
+    ]
+  ){
+
+    const rail =
+    addBox(
+      .2,
+      .2,
+      length,
+      0x9b7348,
+      centerX,
+      y,
+      centerZ
+    );
+
+    rail.rotation.y =
+    angle;
+
+  }
+
+}
+
+fence(
+  -40,
+  -43,
+  40,
+  -43,
+  20
+);
+
+fence(
+  -40,
+  -43,
+  -40,
+  19,
+  15
+);
+
+fence(
+  40,
+  -43,
+  40,
+  19,
+  15
+);
+
+/* CANTEIROS */
+
+const plotMeshes = [];
+
+const plotGeometry =
+new THREE.BoxGeometry(
+  4.4,
+  .28,
+  3.4
+);
+
+const plotMaterials = {
+
+  empty:
+  mat(
+    0x6f4528,
+    1
+  ),
+
+  planted:
+  mat(
+    0x5c4025,
+    1
+  ),
+
+  grown:
+  mat(
+    0x4f3d24,
+    1
+  )
+
+};
+
+function plotPosition(i){
+
+  const column =
+  i % 6;
+
+  const row =
+  Math.floor(
+    i / 6
+  );
+
+  return {
+
+    x:
+    -15 +
+    column * 6,
+
+    z:
+    -30 +
+    row * 5.4
+
+  };
+
+}
+
+function refreshPlot(i){
+
+  const plot =
+  state.plots[i];
+
+  const mesh =
+  plotMeshes[i];
+
+  if(!mesh){
+    return;
+  }
+
+  mesh.material =
+  plotMaterials[
+    plot.state
+  ];
+
+  if(
+    mesh
+    .userData
+    .crop
+  ){
+
+    mesh.remove(
+      mesh.userData.crop
+    );
+
+  }
+
+  if(
+    plot.state !==
+    'empty'
+  ){
+
+    const crop =
+    new THREE.Group();
+
+    const count =
+    plot.state ===
+    'grown'
+    ?
+    12
+    :
+    6;
+
+    for(
+      let k=0;
+      k<count;
+      k++
+    ){
+
+      const stem =
+      new THREE.Mesh(
+
+        new THREE.CylinderGeometry(
+          .05,
+          .07,
+          plot.state === 'grown'
+          ?
+          1.05
+          :
+          .5,
+          6
+        ),
+
+        mat(
+          plot.watered
+          ?
+          0x4e9b43
+          :
+          0x728944,
+          .95
+        )
+
+      );
+
+      stem.position.set(
+
+        (
+          k % 4 -
+          1.5
+        ) *
+        .73,
+
+        plot.state ===
+        'grown'
+        ?
+        .65
+        :
+        .35,
+
+        (
+          Math.floor(
+            k / 4
+          ) -
+          1
+        ) *
+        .78
+
+      );
+
+      stem.castShadow =
+      true;
+
+      crop.add(stem);
+
+      if(
+        plot.state ===
+        'grown'
+      ){
+
+        const fruit =
+        new THREE.Mesh(
+
+          new THREE.SphereGeometry(
+            .17,
+            8,
+            6
+          ),
+
+          mat(
+            0xe8862e,
+            .75
+          )
+
+        );
+
+        fruit.position.set(
+
+          stem.position.x,
+
+          1.22,
+
+          stem.position.z
+
+        );
+
+        crop.add(fruit);
+
+      }
+
+    }
+
+    crop.position.y =
+    .15;
+
+    mesh.add(crop);
+
+    mesh.userData.crop =
+    crop;
+
+  }
+
+}
+
+for(
+  let i=0;
+  i<30;
+  i++
+){
+
+  const position =
+  plotPosition(i);
+
+  const mesh =
+  new THREE.Mesh(
+
+    plotGeometry,
+
+    plotMaterials.empty
+
+  );
+
+  mesh.position.set(
+
+    position.x,
+
+    .15,
+
+    position.z
+
+  );
+
+  mesh.receiveShadow =
+  true;
+
+  mesh.castShadow =
+  true;
+
+  mesh.userData.plotId =
+  i;
+
+  scene.add(mesh);
+
+  plotMeshes.push(mesh);
+
+  refreshPlot(i);
+
+}
+
+/* ANIMAIS */
+
+const animals = [];
+
+function animal(
+  type,
+  x,
+  z,
+  color
+){
+
+  const group =
+  new THREE.Group();
+
+  const body =
+  new THREE.Mesh(
+
+    new THREE.SphereGeometry(
+      type === 'cow'
+      ?
+      1.15
+      :
+      .82,
+      16,
+      12
+    ),
+
+    mat(color)
+
+  );
+
+  body.scale.set(
+    1.45,
+    .9,
+    .8
+  );
+
+  body.position.y =
+  1.35;
+
+  body.castShadow =
+  true;
+
+  group.add(body);
+
+  const head =
+  new THREE.Mesh(
+
+    new THREE.SphereGeometry(
+      type === 'cow'
+      ?
+      .56
+      :
+      .43,
+      12,
+      10
+    ),
+
+    mat(color)
+
+  );
+
+  head.position.set(
+    1.3,
+    1.62,
+    0
+  );
+
+  head.castShadow =
+  true;
+
+  group.add(head);
+
+  for(
+    const dz
+    of
+    [
+      -.45,
+      .45
+    ]
+  ){
+
+    for(
+      const dx
+      of
+      [
+        -.65,
+        .65
+      ]
+    ){
+
+      const leg =
+      new THREE.Mesh(
+
+        new THREE.CylinderGeometry(
+          .1,
+          .12,
+          .9,
+          7
+        ),
+
+        mat(
+          0x43382f
+        )
+
+      );
+
+      leg.position.set(
+        dx,
+        .55,
+        dz
+      );
+
+      group.add(leg);
+
+    }
+
+  }
+
+  group.position.set(
+    x,
+    0,
+    z
+  );
+
+  scene.add(group);
+
+  animals.push({
+
+    g:group,
+
+    bx:x,
+
+    bz:z,
+
+    p:
+    Math.random() *
+    8,
+
+    s:
+    .11 +
+    Math.random() *
+    .13,
+
+    r:
+    2 +
+    Math.random() *
+    4
+
+  });
+
+}
+
+animal(
+  'cow',
+  18,
+  3,
+  0xe6dfcf
+);
+
+animal(
+  'cow',
+  25,
+  8,
+  0x5a4036
+);
+
+animal(
+  'sheep',
+  30,
+  4,
+  0xeeeae1
+);
+
+animal(
+  'sheep',
+  19,
+  10,
+  0xf0ede4
+);
+
+animal(
+  'pig',
+  31,
+  12,
+  0xd99693
+);
+
+/* PERSONAGEM */
+
+const player =
+new THREE.Group();
+
+const torso =
+new THREE.Mesh(
+
+  new THREE.CapsuleGeometry(
+    .55,
+    1.15,
+    6,
+    10
+  ),
+
+  mat(
+    0x2d609b,
+    .7
+  )
+
+);
+
+torso.position.y =
+1.45;
+
+torso.castShadow =
+true;
+
+player.add(torso);
+
+const head =
+new THREE.Mesh(
+
+  new THREE.SphereGeometry(
+    .43,
+    16,
+    12
+  ),
+
+  mat(
+    0xd6a27b,
+    .9
+  )
+
+);
+
+head.position.y =
+2.65;
+
+head.castShadow =
+true;
+
+player.add(head);
+
+const hat =
+new THREE.Mesh(
+
+  new THREE.CylinderGeometry(
+    .72,
+    .72,
+    .16,
+    20
+  ),
+
+  mat(
+    0x8d6a37,
+    1
+  )
+
+);
+
+hat.position.y =
+3.05;
+
+player.add(hat);
+
+player.position.set(
+
+  state.player.x,
+
+  0,
+
+  state.player.z
+
+);
+
+scene.add(player);
+
+/* TRATOR */
+
+const tractor =
+new THREE.Group();
+
+const tractorBody =
+new THREE.Mesh(
+
+  new THREE.BoxGeometry(
+    3.7,
+    1.45,
+    2.2
+  ),
+
+  mat(
+    0x3d7d35,
+    .72
+  )
+
+);
+
+tractorBody.position.y =
+1.45;
+
+tractorBody.castShadow =
+true;
+
+tractor.add(
+  tractorBody
+);
+
+const hood =
+new THREE.Mesh(
+
+  new THREE.BoxGeometry(
+    1.7,
+    1.2,
+    2
+  ),
+
+  mat(
+    0x4c963f,
+    .72
+  )
+
+);
+
+hood.position.set(
+  2,
+  1.45,
+  0
+);
+
+hood.castShadow =
+true;
+
+tractor.add(hood);
+
+const seat =
+new THREE.Mesh(
+
+  new THREE.BoxGeometry(
+    .8,
+    1.2,
+    1
+  ),
+
+  mat(
+    0x252525,
+    .65
+  )
+
+);
+
+seat.position.set(
+  -.8,
+  2.15,
+  0
+);
+
+tractor.add(seat);
+
+const wheelMaterial =
+mat(
+  0x1b1b1b,
+  .9
+);
+
+for(
+  const x
+  of
+  [
+    -1.25,
+    1.35
+  ]
+){
+
+  for(
+    const z
+    of
+    [
+      -1.25,
+      1.25
+    ]
+  ){
+
+    const radius =
+    x < 0
+    ?
+    .78
+    :
+    .62;
+
+    const wheel =
+    new THREE.Mesh(
+
+      new THREE.CylinderGeometry(
+        radius,
+        radius,
+        .52,
+        18
+      ),
+
+      wheelMaterial
+
+    );
+
+    wheel.rotation.x =
+    Math.PI / 2;
+
+    wheel.position.set(
+      x,
+      .72,
+      z
+    );
+
+    wheel.castShadow =
+    true;
+
+    tractor.add(wheel);
+
+  }
+
+}
+
+tractor.position.set(
+
+  state.tractor.x,
+
+  0,
+
+  state.tractor.z
+
+);
+
+tractor.rotation.y =
+state.tractor.rot || 0;
+
+scene.add(tractor);
+
+/* CONTROLES */
+
+const move = {
+  x:0,
+  z:0
+};
+
+const keys =
+new Set();
+
+addEventListener(
+  'keydown',
+  event => {
+
+    keys.add(
+      event.key
+      .toLowerCase()
+    );
+
+    if(
+      event.key
+      .toLowerCase()
+      ===
+      'e'
+    ){
+
+      interact();
+
+    }
+
+    if(
+      event.key
+      .toLowerCase()
+      ===
+      't'
+    ){
+
+      toggleTractor();
+
+    }
+
+  }
+);
+
+addEventListener(
+  'keyup',
+  event => {
+
+    keys.delete(
+      event.key
+      .toLowerCase()
+    );
+
+  }
+);
+
+/* JOYSTICK */
+
+const joystick =
+document.querySelector(
+  '#joystick'
+);
+
+const stick =
+document.querySelector(
+  '#stick'
+);
+
+let pointer = null;
+
+function joystickUpdate(
+  event
+){
+
+  const rect =
+  joystick
+  .getBoundingClientRect();
+
+  const centerX =
+  rect.left +
+  rect.width / 2;
+
+  const centerY =
+  rect.top +
+  rect.height / 2;
+
+  const max = 43;
+
+  let dx =
+  event.clientX -
+  centerX;
+
+  let dy =
+  event.clientY -
+  centerY;
+
+  const length =
+  Math.hypot(
+    dx,
+    dy
+  ) || 1;
+
+  if(
+    length > max
+  ){
+
+    dx =
+    dx /
+    length *
+    max;
+
+    dy =
+    dy /
+    length *
+    max;
+
+  }
+
+  stick.style.transform =
+  `translate(${dx}px,${dy}px)`;
+
+  move.x =
+  dx / max;
+
+  move.z =
+  dy / max;
+
+}
+
+joystick.addEventListener(
+  'pointerdown',
+  event => {
+
+    pointer =
+    event.pointerId;
+
+    joystick.setPointerCapture(
+      event.pointerId
+    );
+
+    joystickUpdate(
+      event
+    );
+
+  }
+);
+
+joystick.addEventListener(
+  'pointermove',
+  event => {
+
+    if(
+      event.pointerId ===
+      pointer
+    ){
+
+      joystickUpdate(
+        event
+      );
+
+    }
+
+  }
+);
+
+function joystickRelease(
+  event
+){
+
+  if(
+    event.pointerId !==
+    pointer
+  ){
+
+    return;
+
+  }
+
+  pointer = null;
+
+  move.x = 0;
+
+  move.z = 0;
+
+  stick.style.transform =
+  'translate(0,0)';
+
+}
+
+joystick.addEventListener(
+  'pointerup',
+  joystickRelease
+);
+
+joystick.addEventListener(
+  'pointercancel',
+  joystickRelease
+);
+
+/* INTERFACE */
+
+function toast(
+  message
+){
+
+  ui.toast.textContent =
+  message;
+
+  ui.toast.classList.add(
+    'show'
+  );
+
+  clearTimeout(
+    toast.timer
+  );
+
+  toast.timer =
+  setTimeout(
+    () => {
+
+      ui.toast
+      .classList
+      .remove(
+        'show'
+      );
+
+    },
+    1800
+  );
+
+}
+
+function saveGame(
+  silent=false
+){
+
+  state.player.x =
+  player.position.x;
+
+  state.player.z =
+  player.position.z;
+
+  state.tractor.x =
+  tractor.position.x;
+
+  state.tractor.z =
+  tractor.position.z;
+
+  state.tractor.rot =
+  tractor.rotation.y;
+
+  localStorage.setItem(
+
+    SAVE_KEY,
+
+    JSON.stringify(
+      state
+    )
+
+  );
+
+  if(
+    !silent
+  ){
+
+    toast(
+      'Jogo salvo no aparelho 💾'
+    );
+
+  }
+
+}
+
+function nearestPlot(){
+
+  let id = -1;
+
+  let distance =
+  Infinity;
+
+  for(
+    let i=0;
+    i<plotMeshes.length;
+    i++
+  ){
+
+    const current =
+    player.position
+    .distanceTo(
+      plotMeshes[i]
+      .position
+    );
+
+    if(
+      current <
+      distance
+    ){
+
+      distance =
+      current;
+
+      id = i;
+
+    }
+
+  }
+
+  return distance < 4.2
+  ?
+  {
+    id,
+    distance
+  }
+  :
+  null;
+
+}
+
+function interact(){
+
+  if(
+    state.inTractor
+  ){
+
+    toast(
+      'Saia do trator para trabalhar no canteiro.'
+    );
+
+    return;
+
+  }
+
+  const near =
+  nearestPlot();
+
+  if(
+    !near
+  ){
+
+    toast(
+      'Chegue mais perto de um canteiro.'
+    );
+
+    return;
+
+  }
+
+  const plot =
+  state.plots[
+    near.id
+  ];
+
+  if(
+    state.energy <
+    3
+  ){
+
+    toast(
+      'Sem energia. Aguarde o próximo dia.'
+    );
+
+    return;
+
+  }
+
+  if(
+    plot.state ===
+    'empty'
+  ){
+
+    if(
+      state.seeds <
+      1
+    ){
+
+      toast(
+        'Você está sem sementes.'
+      );
+
+      return;
+
+    }
+
+    state.seeds--;
+
+    state.energy -=
+    3;
+
+    plot.state =
+    'planted';
+
+    plot.plantedAt =
+    state.elapsed;
+
+    plot.watered =
+    false;
+
+    state.plantedOnce =
+    true;
+
+    toast(
+      'Semente plantada 🌱'
+    );
+
+  }
+
+  else if(
+    plot.state ===
+    'planted'
+    &&
+    !plot.watered
+  ){
+
+    state.energy -=
+    2;
+
+    plot.watered =
+    true;
+
+    toast(
+      'Canteiro regado 💧'
+    );
+
+  }
+
+  else if(
+    plot.state ===
+    'planted'
+  ){
+
+    toast(
+      'Ainda está crescendo.'
+    );
+
+  }
+
+  else{
+
+    const quantity =
+    2 +
+    Math.floor(
+      Math.random() *
+      3
+    );
+
+    state.produce +=
+    quantity;
+
+    state.energy -=
+    2;
+
+    plot.state =
+    'empty';
+
+    plot.watered =
+    false;
+
+    plot.plantedAt =
+    0;
+
+    toast(
+      `Colheita: +${quantity} 🥕`
+    );
+
+  }
+
+  refreshPlot(
+    near.id
+  );
+
+  updateUI();
+
+}
+
+function toggleTractor(){
+
+  const distance =
+  player.position
+  .distanceTo(
+    tractor.position
+  );
+
+  if(
+    state.inTractor
+  ){
+
+    state.inTractor =
+    false;
+
+    player.visible =
+    true;
+
+    player.position.set(
+
+      tractor.position.x -
+      2,
+
+      0,
+
+      tractor.position.z +
+      2
+
+    );
+
+    toast(
+      'Você saiu do trator.'
+    );
+
+  }
+
+  else{
+
+    if(
+      distance >
+      5
+    ){
+
+      toast(
+        'Chegue perto do trator.'
+      );
+
+      return;
+
+    }
+
+    state.inTractor =
+    true;
+
+    player.visible =
+    false;
+
+    toast(
+      'Trator ligado 🚜'
+    );
+
+  }
+
+  updateUI();
+
+}
+
+function sell(){
+
+  if(
+    state.produce <
+    1
+  ){
+
+    toast(
+      'Nenhuma colheita para vender.'
+    );
+
+    return;
+
+  }
+
+  const value =
+  state.produce *
+  18;
+
+  state.money +=
+  value;
+
+  state.produce =
+  0;
+
+  state.soldOnce =
+  true;
+
+  toast(
+    `Venda concluída: +R$ ${value}`
+  );
+
+  updateUI();
+
+}
+
+function randomWeather(){
+
+  if(
+    state.lastWeatherDay ===
+    state.day
+  ){
+
+    return;
+
+  }
+
+  state.lastWeatherDay =
+  state.day;
+
+  const random =
+  Math.random();
+
+  state.weather =
+  random < .2
+  ?
+  'rain'
+  :
+  random < .42
+  ?
+  'cloudy'
+  :
+  'sunny';
+
+}
+
+function dayNight(
+  delta
+){
+
+  state.minutes +=
+  delta * 4;
+
+  if(
+    state.minutes >=
+    1440
+  ){
+
+    state.minutes -=
+    1440;
+
+    state.day++;
+
+    state.energy =
+    100;
+
+    randomWeather();
+
+    toast(
+      `Dia ${state.day}. Energia restaurada.`
+    );
+
+  }
+
+  const time =
+  state.minutes /
+  1440;
+
+  const angle =
+  time *
+  Math.PI *
+  2 -
+  Math.PI /
+  2;
+
+  const y =
+  Math.sin(
+    angle
+  );
+
+  const daylight =
+  THREE.MathUtils.clamp(
+
+    (
+      y +
+      .2
+    ) *
+    1.3,
+
+    .05,
+
+    1
+
+  );
+
+  sun.position.set(
+
+    Math.cos(
+      angle
+    ) *
+    75,
+
+    Math.max(
+      -10,
+      y *
+      75
+    ),
+
+    30
+
+  );
+
+  sun.intensity =
+  .16 +
+  3.05 *
+  daylight;
+
+  hemi.intensity =
+  .25 +
+  1.55 *
+  daylight;
+
+  const nightColor =
+  new THREE.Color(
+    0x101a31
+  );
+
+  const dayColor =
+  state.weather ===
+  'rain'
+  ?
+  new THREE.Color(
+    0x6d8590
+  )
+  :
+  state.weather ===
+  'cloudy'
+  ?
+  new THREE.Color(
+    0x91a5ad
+  )
+  :
+  new THREE.Color(
+    0x9cc9e7
+  );
+
+  scene.background
+  .copy(
+    nightColor
+  )
+  .lerp(
+    dayColor,
+    daylight
+  );
+
+  scene.fog.color
+  .copy(
+    scene.background
+  );
+
+  renderer.toneMappingExposure =
+  .56 +
+  .64 *
+  daylight;
+
+  groundMat.color.setHex(
+
+    state.weather ===
+    'rain'
+    ?
+    0x405f35
+    :
+    0x537e40
+
+  );
+
+}
+
+function updateCrops(){
+
+  for(
+    const plot
+    of
+    state.plots
+  ){
+
+    if(
+      plot.state ===
+      'planted'
+    ){
+
+      const timeNeeded =
+      plot.watered
+      ?
+      3.3
+      :
+      5.7;
+
+      if(
+        state.elapsed -
+        plot.plantedAt >=
+        timeNeeded
+      ){
+
+        plot.state =
+        'grown';
+
+        refreshPlot(
+          plot.id
+        );
+
+      }
+
+    }
+
+  }
+
+}
+
+function updateMission(){
+
+  if(
+    !state.plantedOnce
+  ){
+
+    ui.mission.textContent =
+    '🎯 Missão: plante sua primeira semente.';
+
+  }
+
+  else if(
+    !state.soldOnce
+  ){
+
+    ui.mission.textContent =
+    '🎯 Missão: colha e venda sua primeira produção.';
+
+  }
+
+  else{
+
+    ui.mission.textContent =
+    `🏆 Fazenda em crescimento • Patrimônio atual: R$ ${Math.floor(state.money)}`;
+
+  }
+
+}
+
+function updateUI(){
+
+  ui.money.textContent =
+  Math.floor(
+    state.money
+  );
+
+  ui.energy.textContent =
+  Math.max(
+    0,
+    Math.floor(
+      state.energy
+    )
+  );
+
+  ui.seeds.textContent =
+  state.seeds;
+
+  ui.produce.textContent =
+  state.produce;
+
+  ui.fuel.textContent =
+  Math.max(
+    0,
+    Math.floor(
+      state.fuel
+    )
+  );
+
+  ui.day.textContent =
+  `Dia ${state.day}`;
+
+  const hours =
+  Math.floor(
+    state.minutes /
+    60
+  ) % 24;
+
+  const minutes =
+  Math.floor(
+    state.minutes %
+    60
+  );
+
+  ui.time.textContent =
+  `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}`;
+
+  ui.weather.textContent =
+  state.weather ===
+  'rain'
+  ?
+  '🌧️ Chuva'
+  :
+  state.weather ===
+  'cloudy'
+  ?
+  '☁️ Nublado'
+  :
+  '☀️ Ensolarado';
+
+  ui.tractor.textContent =
+  state.inTractor
+  ?
+  '🚜 Sair'
+  :
+  '🚜 Trator';
+
+  updateMission();
+
+  if(
+    state.inTractor
+  ){
+
+    ui.hint.textContent =
+    'Dirigindo o trator • combustível é consumido';
+
+    ui.action.textContent =
+    '🌱 Ação';
+
+    return;
+
+  }
+
+  const near =
+  nearestPlot();
+
+  const tractorDistance =
+  player.position
+  .distanceTo(
+    tractor.position
+  );
+
+  if(
+    !near
+    &&
+    tractorDistance <
+    5
+  ){
+
+    ui.hint.textContent =
+    'Trator próximo';
+
+    ui.action.textContent =
+    '🌱 Ação';
+
+    return;
+
+  }
+
+  if(
+    !near
+  ){
+
+    ui.hint.textContent =
+    'Aproxime-se de um canteiro';
+
+    ui.action.textContent =
+    '🌱 Ação';
+
+    return;
+
+  }
+
+  const plot =
+  state.plots[
+    near.id
+  ];
+
+  if(
+    plot.state ===
+    'empty'
+  ){
+
+    ui.hint.textContent =
+    'Canteiro vazio';
+
+    ui.action.textContent =
+    '🌱 Plantar';
+
+  }
+
+  else if(
+    plot.state ===
+    'planted'
+    &&
+    !plot.watered
+  ){
+
+    ui.hint.textContent =
+    'Precisa de água';
+
+    ui.action.textContent =
+    '💧 Regar';
+
+  }
+
+  else if(
+    plot.state ===
+    'planted'
+  ){
+
+    ui.hint.textContent =
+    'Crescendo...';
+
+    ui.action.textContent =
+    '⏳ Crescendo';
+
+  }
+
+  else{
+
+    ui.hint.textContent =
+    'Pronto para colher!';
+
+    ui.action.textContent =
+    '🥕 Colher';
+
+  }
+
+}
+
+/* BOTÕES */
+
+ui.action.addEventListener(
+  'click',
+  interact
+);
+
+ui.tractor.addEventListener(
+  'click',
+  toggleTractor
+);
+
+ui.shop.addEventListener(
+  'click',
+  () => {
+
+    ui.dialog.showModal();
+
+  }
+);
+
+ui.closeShop.addEventListener(
+  'click',
+  () => {
+
+    ui.dialog.close();
+
+  }
+);
+
+ui.buySeeds.addEventListener(
+  'click',
+  () => {
+
+    if(
+      state.money <
+      25
+    ){
+
+      toast(
+        'Dinheiro insuficiente.'
+      );
+
+      return;
+
+    }
+
+    state.money -=
+    25;
+
+    state.seeds +=
+    5;
+
+    toast(
+      '+5 sementes'
+    );
+
+    updateUI();
+
+  }
+);
+
+ui.buyFuel.addEventListener(
+  'click',
+  () => {
+
+    if(
+      state.money <
+      40
+    ){
+
+      toast(
+        'Dinheiro insuficiente.'
+      );
+
+      return;
+
+    }
+
+    state.money -=
+    40;
+
+    state.fuel =
+    Math.min(
+      100,
+      state.fuel +
+      25
+    );
+
+    toast(
+      '+25% combustível'
+    );
+
+    updateUI();
+
+  }
+);
+
+ui.sell.addEventListener(
+  'click',
+  sell
+);
+
+ui.save.addEventListener(
+  'click',
+  () => {
+
+    saveGame();
+
+  }
+);
+
+ui.reset.addEventListener(
+  'click',
+  () => {
+
+    if(
+      confirm(
+        'Apagar todo o progresso e começar de novo?'
+      )
+    ){
+
+      localStorage.removeItem(
+        SAVE_KEY
+      );
+
+      location.reload();
+
+    }
+
+  }
+);
+
+/* LOOP PRINCIPAL */
+
+const clock =
+new THREE.Clock();
+
+let uiTick = 0;
+
+function animate(){
+
+  requestAnimationFrame(
+    animate
+  );
+
+  const delta =
+  Math.min(
+    clock.getDelta(),
+    .05
+  );
+
+  state.elapsed +=
+  delta;
+
+  let inputX =
+  move.x;
+
+  let inputZ =
+  move.z;
+
+  if(
+    keys.has('a')
+    ||
+    keys.has('arrowleft')
+  ){
+
+    inputX -=
+    1;
+
+  }
+
+  if(
+    keys.has('d')
+    ||
+    keys.has('arrowright')
+  ){
+
+    inputX +=
+    1;
+
+  }
+
+  if(
+    keys.has('w')
+    ||
+    keys.has('arrowup')
+  ){
+
+    inputZ -=
+    1;
+
+  }
+
+  if(
+    keys.has('s')
+    ||
+    keys.has('arrowdown')
+  ){
+
+    inputZ +=
+    1;
+
+  }
+
+  const movement =
+  new THREE.Vector2(
+    inputX,
+    inputZ
+  );
+
+  if(
+    movement.length() >
+    1
+  ){
+
+    movement.normalize();
+
+  }
+
+  if(
+    state.inTractor
+  ){
+
+    if(
+      state.fuel <=
+      0
+    ){
+
+      if(
+        movement.lengthSq() >
+        .01
+      ){
+
+        toast(
+          'Trator sem combustível.'
+        );
+
+      }
+
+    }
+
+    else{
+
+      const speed =
+      12;
+
+      const turn =
+      2.1;
+
+      tractor.rotation.y -=
+      movement.x *
+      turn *
+      delta;
+
+      const forward =
+      -movement.y;
+
+      tractor.position.x +=
+
+      Math.sin(
+        tractor.rotation.y
+      ) *
+
+      forward *
+
+      speed *
+
+      delta;
+
+      tractor.position.z +=
+
+      Math.cos(
+        tractor.rotation.y
+      ) *
+
+      forward *
+
+      speed *
+
+      delta;
+
+      tractor.position.x =
+      THREE.MathUtils.clamp(
+        tractor.position.x,
+        -100,
+        100
+      );
+
+      tractor.position.z =
+      THREE.MathUtils.clamp(
+        tractor.position.z,
+        -100,
+        100
+      );
+
+      if(
+        Math.abs(
+          forward
+        ) >
+        .05
+      ){
+
+        state.fuel =
+        Math.max(
+          0,
+          state.fuel -
+          delta *
+          .22
+        );
+
+      }
+
+    }
+
+    const targetCamera =
+    new THREE.Vector3(
+
+      tractor.position.x +
+      Math.sin(
+        tractor.rotation.y +
+        1.05
+      ) *
+      12,
+
+      9,
+
+      tractor.position.z +
+      Math.cos(
+        tractor.rotation.y +
+        1.05
+      ) *
+      12
+
+    );
+
+    camera.position.lerp(
+
+      targetCamera,
+
+      1 -
+      Math.pow(
+        .002,
+        delta
+      )
+
+    );
+
+    camera.lookAt(
+
+      tractor.position.x,
+
+      1.4,
+
+      tractor.position.z
+
+    );
+
+  }
+
+  else{
+
+    const speed =
+    7.3 *
+    (
+      state.energy >
+      0
+      ?
+      1
+      :
+      .45
+    );
+
+    player.position.x +=
+    movement.x *
+    speed *
+    delta;
+
+    player.position.z +=
+    movement.y *
+    speed *
+    delta;
+
+    player.position.x =
+    THREE.MathUtils.clamp(
+      player.position.x,
+      -100,
+      100
+    );
+
+    player.position.z =
+    THREE.MathUtils.clamp(
+      player.position.z,
+      -100,
+      100
+    );
+
+    if(
+      movement.lengthSq() >
+      .01
+    ){
+
+      player.rotation.y =
+      Math.atan2(
+        movement.x,
+        movement.y
+      );
+
+      state.energy =
+      Math.max(
+        0,
+        state.energy -
+        delta *
+        .055
+      );
+
+    }
+
+    const targetCamera =
+    new THREE.Vector3(
+
+      player.position.x +
+      11,
+
+      12,
+
+      player.position.z +
+      15
+
+    );
+
+    camera.position.lerp(
+
+      targetCamera,
+
+      1 -
+      Math.pow(
+        .002,
+        delta
+      )
+
+    );
+
+    camera.lookAt(
+
+      player.position.x,
+
+      1.5,
+
+      player.position.z -
+      1.5
+
+    );
+
+  }
+
+  animals.forEach(
+    animal => {
+
+      const time =
+      state.elapsed *
+      animal.s +
+      animal.p;
+
+      animal.g.position.x =
+      animal.bx +
+      Math.cos(
+        time
+      ) *
+      animal.r;
+
+      animal.g.position.z =
+      animal.bz +
+      Math.sin(
+        time *
+        .8
+      ) *
+      animal.r;
+
+      animal.g.rotation.y =
+      -time;
+
+    }
+  );
+
+  dayNight(
+    delta
+  );
+
+  updateCrops();
+
+  uiTick +=
+  delta;
+
+  if(
+    uiTick >
+    .16
+  ){
+
+    updateUI();
+
+    uiTick =
+    0;
+
+  }
+
+  renderer.render(
+    scene,
+    camera
+  );
+
+}
+
+updateUI();
+
+animate();
+
+setInterval(
+  () => {
+
+    saveGame(
+      true
+    );
+
+  },
+  15000
+);
+
+addEventListener(
+  'beforeunload',
+  () => {
+
+    saveGame(
+      true
+    );
+
+  }
+);
+
+addEventListener(
+  'resize',
+  () => {
+
+    camera.aspect =
+    innerWidth /
+    innerHeight;
+
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(
+      innerWidth,
+      innerHeight
+    );
+
+  }
+);
+
+</script>
+
+</body>
+</html>
